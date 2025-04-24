@@ -22,4 +22,9 @@ public class OrderController {
             request.getSide()
         );
     }
+
+    @PostMapping("/stop")
+    public void stop() {
+        orderService.destroySession();
+    }
 }

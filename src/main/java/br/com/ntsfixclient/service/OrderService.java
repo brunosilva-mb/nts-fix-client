@@ -1,5 +1,6 @@
 package br.com.ntsfixclient.service;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,31 +15,48 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final Session session;
+    private final SessionSettings settings;
+    private final Initiator initiator;
+
+    private SessionID sessionID;
 
     public void sendNewOrderSingle(String symbol, double price, int quantity, char side) {
-        try {
-            NewOrderSingle order = new NewOrderSingle(
-                    new ClOrdID(generateOrderId()),
-                    new Side(side),
-                    new TransactTime(LocalDateTime.now()),
-                    new OrdType(OrdType.LIMIT)
-            );
+        NewOrderSingle order = new NewOrderSingle(
+                new ClOrdID("ORDER-" + System.currentTimeMillis()),
+                new Side(side),
+                new TransactTime(LocalDateTime.now()),
+                new OrdType(OrdType.LIMIT)
+        );
 
-            order.set(new Symbol(symbol));
-            order.set(new Price(price));
-            order.set(new OrderQty(quantity));
-            
-            Session.sendToTarget(order, session.getSessionID());
-            
-            log.info("New order sent: {}", order);
-        } catch (SessionNotFound e) {
-            log.error("Error sending order", e);
-            throw new RuntimeException("Failed to send order", e);
+        order.set(new Symbol(symbol));
+        order.set(new Price(price));
+        order.set(new OrderQty(quantity));
+        order.set(new TimeInForce(TimeInForce.GOOD_TILL_CANCEL));
+
+        send(order);
+        log.info("New order sent: {}", order);
+    }
+
+    private void send(Message message) {
+        sessionID = new SessionID("FIXT.1.1", "user-bc1", "PEB");
+        Session session = Session.lookupSession(sessionID);
+        if (session != null && session.isLoggedOn()) {
+            session.send(message);
+            log.info("NewOrderSingle message sent: {}", message.toString().replace('\u0001', '|'));
+        } else {
+            log.warn("Session not active. Cannot send message.");
         }
     }
 
-    private String generateOrderId() {
-        return "ORDER-" + System.currentTimeMillis();
+    @PreDestroy
+    public void destroySession() {
+        if (initiator != null && initiator.isLoggedOn()) {
+            Session session = Session.lookupSession(sessionID);
+            if (session != null) {
+                session.logout("User requested logout");
+            }
+            initiator.stop();
+            log.info("FIX Client stopped.");
+        }
     }
 }
