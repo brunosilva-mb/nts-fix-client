@@ -1,12 +1,17 @@
 package br.com.ntsfixclient.service;
 
+import br.com.ntsfixclient.controller.model.OrderCrossRequest;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import quickfix.*;
 import quickfix.field.*;
+import quickfix.fix50sp2.NewOrderCross;
 import quickfix.fix50sp2.NewOrderSingle;
+import quickfix.fix50sp2.component.Instrument;
+import quickfix.fix50sp2.component.OrderQtyData;
+import quickfix.fix50sp2.component.SideCrossOrdModGrp;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +20,6 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final SessionSettings settings;
     private final Initiator initiator;
 
     private SessionID sessionID;
@@ -34,7 +38,44 @@ public class OrderService {
         order.set(new TimeInForce(TimeInForce.GOOD_TILL_CANCEL));
 
         send(order);
-        log.info("New order sent: {}", order);
+        log.info("New order single sent: {}", order);
+    }
+
+    public void sendNewOrderCross(OrderCrossRequest request) {
+        NewOrderCross order = new NewOrderCross(
+            new CrossID(request.getCrossId()),
+            new CrossType(request.getCrossType()),
+            new CrossPrioritization(request.getCrossPrioritization()),
+            new TransactTime(LocalDateTime.now()),
+            new OrdType(request.getOrderType())
+        );
+
+        var sideCrossGroup = new SideCrossOrdModGrp();
+        request.getSides().forEach(
+            orderSide -> {
+                var sideGroup = new SideCrossOrdModGrp.NoSides();
+                sideGroup.set(new Side(orderSide.getSide()));
+                sideGroup.set(new ClOrdID(orderSide.getClientOrderId()));
+                sideGroup.set(new Account(orderSide.getAccount()));
+
+                var quantityData = new OrderQtyData();
+                quantityData.set(new OrderQty(orderSide.getQuantity().doubleValue()));
+                sideGroup.set(quantityData);
+
+                sideGroup.setBoolean(1057, orderSide.isAggressor());
+            }
+        );
+
+        order.set(sideCrossGroup);
+
+        var instrument = new Instrument();
+        instrument.set(new Symbol(request.getSymbol()));
+        order.set(instrument);
+
+        order.set(new Price(request.getPrice().doubleValue()));
+
+        send(order);
+        log.info("New order Cross sent: {}", order);
     }
 
     private void send(Message message) {
