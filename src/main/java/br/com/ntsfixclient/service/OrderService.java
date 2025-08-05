@@ -51,6 +51,7 @@ public class OrderService {
         );
 
         var sideCrossGroup = new SideCrossOrdModGrp();
+        sideCrossGroup.set(new NoSides(request.getNoSides()));
         request.getSides().forEach(
             orderSide -> {
                 var sideGroup = new SideCrossOrdModGrp.NoSides();
@@ -63,6 +64,7 @@ public class OrderService {
                 sideGroup.set(quantityData);
 
                 sideGroup.setBoolean(1057, orderSide.isAggressor());
+                sideCrossGroup.addGroup(sideGroup);
             }
         );
 
@@ -73,6 +75,7 @@ public class OrderService {
         order.set(instrument);
 
         order.set(new Price(request.getPrice().doubleValue()));
+        order.set(new PriceType(request.getPriceType()));
 
         send(order);
         log.info("New order Cross sent: {}", order);
@@ -83,7 +86,7 @@ public class OrderService {
         Session session = Session.lookupSession(sessionID);
         if (session != null && session.isLoggedOn()) {
             session.send(message);
-            log.info("NewOrderSingle message sent: {}", message.toString().replace('\u0001', '|'));
+            log.info("Message sent: {}", message.toString().replace('\u0001', '|'));
         } else {
             log.warn("Session not active. Cannot send message.");
         }

@@ -62,7 +62,7 @@ public class FixMessageHandler extends MessageCracker implements Application {
 
     @Override
     public void fromApp(Message message, SessionID sessionID) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
-        log.info("FromApp - {}: {}", sessionID, message.toString().replace('\u0001', '|'));
+        //log.info("FromApp - {}: {}", sessionID, message.toString().replace('\u0001', '|'));
         crack(message, sessionID);
     }
 
