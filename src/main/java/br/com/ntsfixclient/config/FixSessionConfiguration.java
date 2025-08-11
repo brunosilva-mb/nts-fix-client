@@ -58,7 +58,6 @@ public class FixSessionConfiguration {
         final File configFile = (configResource == null) ? new File("/fixSession.cfg") : new File(configResource.getFile());
         log.info("Using config: {}", configFile.getCanonicalPath());
         return new BufferedInputStream(new FileInputStream(configFile));
-
     }
 
 }

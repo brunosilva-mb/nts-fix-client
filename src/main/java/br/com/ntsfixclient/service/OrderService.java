@@ -3,6 +3,7 @@ package br.com.ntsfixclient.service;
 import br.com.ntsfixclient.controller.model.OrderCrossRequest;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import quickfix.*;
@@ -15,14 +16,13 @@ import quickfix.fix50sp2.component.SideCrossOrdModGrp;
 
 import java.time.LocalDateTime;
 
-@Service
 @Slf4j
-@RequiredArgsConstructor
-public class OrderService {
+@Service
+public class OrderService extends FixService {
 
-    private final Initiator initiator;
-
-    private SessionID sessionID;
+    public OrderService(Initiator initiator, SessionSettings settings) {
+        super(initiator, settings);
+    }
 
     public void sendNewOrderSingle(String symbol, double price, int quantity, char side) {
         NewOrderSingle order = new NewOrderSingle(
@@ -79,28 +79,5 @@ public class OrderService {
 
         send(order);
         log.info("New order Cross sent: {}", order);
-    }
-
-    private void send(Message message) {
-        sessionID = new SessionID("FIXT.1.1", "user-bc1", "PEB");
-        Session session = Session.lookupSession(sessionID);
-        if (session != null && session.isLoggedOn()) {
-            session.send(message);
-            log.info("Message sent: {}", message.toString().replace('\u0001', '|'));
-        } else {
-            log.warn("Session not active. Cannot send message.");
-        }
-    }
-
-    @PreDestroy
-    public void destroySession() {
-        if (initiator != null && initiator.isLoggedOn()) {
-            Session session = Session.lookupSession(sessionID);
-            if (session != null) {
-                session.logout("User requested logout");
-            }
-            initiator.stop();
-            log.info("FIX Client stopped.");
-        }
     }
 }
