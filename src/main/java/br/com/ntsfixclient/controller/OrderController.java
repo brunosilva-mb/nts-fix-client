@@ -1,5 +1,6 @@
 package br.com.ntsfixclient.controller;
 
+import br.com.ntsfixclient.controller.model.OrderCrossRequest;
 import br.com.ntsfixclient.controller.model.OrderRequest;
 import br.com.ntsfixclient.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ public class OrderController {
     
     private final OrderService orderService;
     
-    @PostMapping("/orders")
+    @PostMapping("/broker/orders/single")
     public void createOrder(@RequestBody OrderRequest request) {
         orderService.sendNewOrderSingle(
             request.getSymbol(),
@@ -21,6 +22,11 @@ public class OrderController {
             request.getQuantity(),
             request.getSide()
         );
+    }
+
+    @PostMapping("/broker/orders/cross")
+    public void createCrossOrder(@RequestBody OrderCrossRequest request) {
+        orderService.sendNewOrderCross(request);
     }
 
     @PostMapping("/stop")
